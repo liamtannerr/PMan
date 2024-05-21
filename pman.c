@@ -6,6 +6,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#define BLUE "\x1b[34m"
+#define RESET "\x1b[0m"
+#define RED  "\x1b[31m"
+#define GREEN "\x1b[32m"
+
 // Function prototypes
 void handleCommand(char *command);
 void bg(char *program);
@@ -19,7 +24,7 @@ int main() {
     char command[256];
 
     while (1) {
-        printf("PMan: > ");
+        printf(BLUE "PMan: > " RESET);
         if (fgets(command, sizeof(command), stdin) == NULL) {
             break;
         }
@@ -40,7 +45,7 @@ void handleCommand(char *command) {
         if (token) {
             bg(token);
         } else {
-            printf("Error: No program specified for bg command\n");
+            printf(RED "Error: No program specified for bg command\n" RESET);
         }
     } else if (strcmp(token, "bglist") == 0) {
         bglist();
@@ -49,36 +54,64 @@ void handleCommand(char *command) {
         if (token) {
             bgkill(atoi(token));
         } else {
-            printf("Error: No pid specified for bgkill command\n");
+            printf(RED "Error: No pid specified for bgkill command\n" RESET);
         }
     } else if (strcmp(token, "bgstop") == 0) {
         token = strtok(NULL, " ");
         if (token) {
             bgstop(atoi(token));
         } else {
-            printf("Error: No pid specified for bgstop command\n");
+            printf(RED "Error: No pid specified for bgstop command\n" RESET);
         }
     } else if (strcmp(token, "bgstart") == 0) {
         token = strtok(NULL, " ");
         if (token) {
             bgstart(atoi(token));
         } else {
-            printf("Error: No pid specified for bgstart command\n");
+            printf(RED "Error: No pid specified for bgstart command\n" RESET);
         }
     } else if (strcmp(token, "pstat") == 0) {
         token = strtok(NULL, " ");
         if (token) {
             pstat(atoi(token));
         } else {
-            printf("Error: No pid specified for pstat command\n");
+            printf(RED "Error: No pid specified for pstat command\n" RESET);
         }
     } else {
-        printf("Error: Command not found\n");
+        printf(RED "Error: Command not found\n" RESET);
     }
 }
 
 void bg(char *program) {
-    // Implementation of bg command
+    pid_t pid = fork(); // Create a new process
+    if (pid < 0) {
+        // Fork failed
+        perror(RED "fork" RESET);
+        exit(1);
+    } else if (pid == 0) {
+        // Child process
+        char *args[256];
+        int i = 0;
+        args[i++] = program;
+        
+        // Parse remaining arguments
+        char *token = strtok(NULL, " ");
+        while (token != NULL) {
+            args[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        args[i] = NULL; // Null-terminate the arguments array
+
+        if (execvp(args[0], args) < 0) {
+            // execvp failed
+            perror(RED "execvp" RESET);
+            exit(1);
+        }
+    } else {
+        // Parent process
+        printf(GREEN "Started background process with PID %d\n" RESET, pid);
+        // PMan continues running and accepting commands
+    }
 }
 
 void bglist() {
