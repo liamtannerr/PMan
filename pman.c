@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include "CommandHandler.h"
+#include "linkedlist.h"
 
 #define BLUE "\x1b[34m"
 #define RESET "\x1b[0m"
@@ -12,13 +14,15 @@
 #define GREEN "\x1b[32m"
 
 // Function prototypes
-void handleCommand(char *command);
 void bg(char *program);
 void bglist();
 void bgkill(pid_t pid);
 void bgstop(pid_t pid);
 void bgstart(pid_t pid);
 void pstat(pid_t pid);
+
+
+Node *bg_list = NULL;
 
 int main() {
     char command[256];
@@ -38,49 +42,6 @@ int main() {
     return 0;
 }
 
-void handleCommand(char *command) {
-    char *token = strtok(command, " ");
-    if (strcmp(token, "bg") == 0) {
-        token = strtok(NULL, " ");
-        if (token) {
-            bg(token);
-        } else {
-            printf(RED "Error: No program specified for bg command\n" RESET);
-        }
-    } else if (strcmp(token, "bglist") == 0) {
-        bglist();
-    } else if (strcmp(token, "bgkill") == 0) {
-        token = strtok(NULL, " ");
-        if (token) {
-            bgkill(atoi(token));
-        } else {
-            printf(RED "Error: No pid specified for bgkill command\n" RESET);
-        }
-    } else if (strcmp(token, "bgstop") == 0) {
-        token = strtok(NULL, " ");
-        if (token) {
-            bgstop(atoi(token));
-        } else {
-            printf(RED "Error: No pid specified for bgstop command\n" RESET);
-        }
-    } else if (strcmp(token, "bgstart") == 0) {
-        token = strtok(NULL, " ");
-        if (token) {
-            bgstart(atoi(token));
-        } else {
-            printf(RED "Error: No pid specified for bgstart command\n" RESET);
-        }
-    } else if (strcmp(token, "pstat") == 0) {
-        token = strtok(NULL, " ");
-        if (token) {
-            pstat(atoi(token));
-        } else {
-            printf(RED "Error: No pid specified for pstat command\n" RESET);
-        }
-    } else {
-        printf(RED "Error: Command not found\n" RESET);
-    }
-}
 
 void bg(char *program) {
     pid_t pid = fork(); // Create a new process
@@ -111,11 +72,12 @@ void bg(char *program) {
         // Parent process
         printf(GREEN "Started background process with PID %d\n" RESET, pid);
         // PMan continues running and accepting commands
+	bg_list = add_newNode(bg_list, pid, program);
     }
 }
 
 void bglist() {
-    // Implementation of bglist command
+	printList(bg_list);
 }
 
 void bgkill(pid_t pid) {
