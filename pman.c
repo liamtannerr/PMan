@@ -81,18 +81,86 @@ void bglist() {
 }
 
 void bgkill(pid_t pid) {
-    // Implementation of bgkill command
+     if (kill(pid, SIGTERM) == 0) {
+        printf("Process %d terminated\n", pid);
+        bg_list = deleteNode(bg_list, pid);
+    } else {
+        perror("Error terminating process");
+    }
 }
 
 void bgstop(pid_t pid) {
-    // Implementation of bgstop command
+    if (kill(pid, SIGSTOP) == 0) {
+        printf("Process %d stopped\n", pid);
+    } else {
+        perror("Error stopping process");
+    }
 }
 
 void bgstart(pid_t pid) {
-    // Implementation of bgstart command
+    if (kill(pid, SIGCONT) == 0) {
+        printf("Process %d started\n", pid);
+    } else {
+        perror("Error starting process");
+    }
 }
 
 void pstat(pid_t pid) {
-    // Implementation of pstat command
+    char stat_path[256], status_path[256];
+    FILE *stat_file, *status_file;
+    char buffer[1024];
+    char comm[256], state;
+    long utime, stime;
+    long rss;
+    int voluntary_ctxt_switches = 0, nonvoluntary_ctxt_switches = 0;
+
+    // Build file paths
+    snprintf(stat_path, sizeof(stat_path), "/proc/%d/stat", pid);
+    snprintf(status_path, sizeof(status_path), "/proc/%d/status", pid);
+
+    // Open /proc/[pid]/stat
+    stat_file = fopen(stat_path, "r");
+    if (stat_file == NULL) {
+        perror("Error opening stat file");
+        printf("Error: Process %d does not exist\n", pid);
+        return;
+    }
+
+    // Read required fields from /proc/[pid]/stat
+    fscanf(stat_file, "%*d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %*u %*u %ld %ld %*d %*d %*d %*d %ld", comm, &state, &utime, &stime, &rss);
+    fclose(stat_file);
+
+    // Open /proc/[pid]/status
+    status_file = fopen(status_path, "r");
+    if (status_file == NULL) {
+        perror("Error opening status file");
+        printf("Error: Process %d does not exist\n", pid);
+        return;
+    }
+
+    // Read voluntary and nonvoluntary context switches from /proc/[pid]/status
+    while (fgets(buffer, sizeof(buffer), status_file)) {
+        if (sscanf(buffer, "voluntary_ctxt_switches: %d", &voluntary_ctxt_switches) == 1) {
+            continue;
+        }
+        if (sscanf(buffer, "nonvoluntary_ctxt_switches: %d", &nonvoluntary_ctxt_switches) == 1) {
+            continue;
+        }
+    }
+    fclose(status_file);
+
+    // Calculate utime and stime in seconds
+    long ticks_per_second = sysconf(_SC_CLK_TCK);
+    double utime_sec = (double)utime / ticks_per_second;
+    double stime_sec = (double)stime / ticks_per_second;
+
+    // Print the information
+    printf("comm: (%s)\n", comm);
+    printf("state: %c\n", state);
+    printf("utime: %lf\n", utime_sec);
+    printf("stime: %lf\n", stime_sec);
+    printf("rss: %ld\n", rss);
+    printf("voluntary ctxt switches: %d\n", voluntary_ctxt_switches);
+    printf("nonvoluntary ctxt switches: %d\n", nonvoluntary_ctxt_switches);
 }
 
